@@ -1,87 +1,125 @@
 provider "aws" {
-  region = "us-east-1"  #
+  region = "us-west-1"  
 }
 
-# Create a VPC
-resource "aws_vpc" "nas-vpc" {
+resource "aws_vpc" "nats_vpc" {
   cidr_block = "10.0.0.0/16"
 }
-resource "aws_subnet" "nats-subnet" {
-  vpc_id     = aws_vpc.nas-vpc.id
-  cidr_block = "10.0.0.0/24"
+
+resource "aws_subnet" "public_subnet" {
+  vpc_id     = aws_vpc.nats_vpc.id
+  cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone = "us-west-1a"  
 }
 
-# Create a security group for the  NATS servers
+resource "aws_subnet" "private_subnet" {
+  vpc_id     = aws_vpc.nats_vpc.id
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "us-west-1b"  
+}
+
 resource "aws_security_group" "nats_sg" {
   name_prefix = "nats-sg-"
 
-  # Define security group rules for NATS ports (4222, 6222, 8222)
-  ingress {
-    from_port = 4222
-    to_port   = 4222
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
-  }
-  ingress {
-    from_port = 22
-    to_port   = 22
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
-  }
-  ingress {
-    from_port = 80
-    to_port   = 80
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
-  }
-    egress {
+  egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # monitoring 
   ingress {
-    from_port = 8222
-    to_port   = 8222
-    protocol  = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 4222
+    to_port     = 4222
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# Create NATS instances
-resource "aws_instance" "nats" {
-  count = 3  # Number of NATS instances
+resource "aws_instance" "nats_instance" {
+  count = 3
+  ami           = "ami-053b0d53c279acc90" 
+  instance_type = "t2.micro" 
 
-  ami           = "ami-053b0d53c279acc90"  # Your desired NATS instance AMI ID
-  instance_type = "t2.micro"      # Your desired instance type
-  vpc_security_group_ids = [aws_security_group.nats_sg.id]
-
+  subnet_id        = aws_subnet.public_subnet.id
+  security_groups = [aws_security_group.nats_sg.name]
 
   user_data = <<-EOF
     #!/bin/bash
-    curl -LO https://github.com/nats-io/nats-server/releases/download/v2.6.0/nats-server-v2.6.0-linux-amd64.zip
-    unzip nats-server-v2.6.0-linux-amd64.zip
-    mv nats-server-v2.6.0-linux-amd64 /usr/local/bin/nats-server
-    rm nats-server-v2.6.0-linux-amd64.zip
+    sudo yum update -y
+    sudo yum install -y wget unzip
+    wget https://github.com/nats-io/nats-server/releases/download/v2.6.2/nats-server-v2.6.2-linux-amd64.zip
+    unzip nats-server-v2.6.2-linux-amd64.zip
+    chmod +x nats-server-v2.6.2-linux-amd64/nats-server
+    nohup ./nats-server-v2.6.2-linux-amd64/nats-server -p 4222 -cluster nats://0.0.0.0:6222 &
+    EOF
 
-    # Create a configuration file for NATS
-    echo "Creating NATS configuration..."
-    cat <<EOF > /etc/nats.conf
-    port: 4222
-    port: 4222
+  tags = {
+    Name = "nats-server-${count.index}"
+  }
+}
 
-    # HTTP monitoring port
-    monitor_port: 8222
+resource "aws_network_acl" "public_subnet_acl" {
+  subnet_ids = [aws_subnet.public_subnet.id]
 
-    # This is for clustering multiple servers together.
-    cluster {
-    # It is recommended to set a cluster name
-    name: "nats-demo"
-    }
-    echo "Starting NATS server..."
-    nats-server -c /path/to/nats.conf 
-  EOF
-  
+  egress {
+    protocol = "-1"
+    rule_no  = 100
+    action   = "allow"
+    cidr_block = "0.0.0.0/0"
+  }
+
+  ingress {
+    protocol = "tcp"
+    rule_no  = 100
+    action   = "allow"
+    from_port = 22
+    to_port   = 22
+    cidr_block = "0.0.0.0/0"
+  }
+
+  ingress {
+    protocol = "tcp"
+    rule_no  = 200
+    action   = "allow"
+    from_port = 4222
+    to_port   = 4222
+    cidr_block = "0.0.0.0/0"
+  }
+
+  ingress {
+    protocol = "tcp"
+    rule_no  = 300
+    action   = "allow"
+    from_port = 6222
+    to_port   = 6222
+    cidr_block = "0.0.0.0/0"
+  }
+}
+
+resource "aws_network_acl" "private_subnet_acl" {
+  subnet_ids = [aws_subnet.private_subnet.id]
+
+  egress {
+    protocol = "-1"
+    rule_no  = 100
+    action   = "allow"
+    cidr_block = "0.0.0.0/0"
+  }
+}
+
+output "public_subnet_id" {
+  value = aws_subnet.public_subnet.id
+}
+
+output "private_subnet_id" {
+  value = aws_subnet.private_subnet.id
 }
