@@ -1,0 +1,43 @@
+services:
+  server1:
+    image: nats
+    command: -c /etc/server.conf --name server1 -p 4222
+    volumes:
+      - ./server-configs/server1.conf:/etc/server.conf
+    ports:
+      - 4222:4222
+      - 6222:6222
+      - 7222:7222
+      - 8222:8222
+    networks:
+      - nats-cluster
+
+  server2:
+    image: nats
+    command: -c /etc/server.conf --name server2 -p 4222
+    volumes:
+      - ./server-configs/server2.conf:/etc/server.conf
+    ports:
+      - 4223:4222
+      - 6222:6222
+      - 7222:7222
+      - 8222:8222
+    networks:
+      - nats-cluster
+
+  server3:
+    image: nats
+    command: -c /etc/server.conf --name server3 -p 4222
+    volumes:
+      - ./server-configs/server3.conf:/etc/server.conf
+    ports:
+      - 4224:4222
+      - 6222:6222
+      - 7222:7222
+      - 8222:8222
+    networks:
+      - nats-cluster
+
+networks:
+  nats-cluster:
+      
