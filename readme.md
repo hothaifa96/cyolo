@@ -24,20 +24,20 @@ This repository contains Terraform configurations to set up a NATS cluster with 
 3. Run `python main.py`
 
 ## project structure
-cyolo
-├─ docker-compose-cluster ..... (built while learning nats for this demo)
-│  ├─ docker-compose.yaml ..... docker-compose file
-│  ├─ server-configs ..... server config files
-│  │  ├─ server1.conf ...... server1 conf file
-│  │  ├─ server2.conf ...... server2 conf file
-│  │  └─ server3.conf ...... server3 conf file
-├─ publisher ......... publisher and subscriber
-│   ├─ p.py ..... publisher script
-│   └─ s.conf ......sublisher script
-├─ test . package-lock.json
-│   ├─ values.env................. env file
-│   ├─ test_cluster.py................. test script
-│   └─ requirements.env................. packages to install
-├─ main.tf ...... terraform file
-├─ readme.md ..... readme.md
+- cyolo
+- ├─ docker-compose-cluster ..... (built while learning nats for this demo)
+- │  ├─ docker-compose.yaml ..... docker-compose file
+- │  ├─ server-configs ..... server config files
+- │  │  ├─ server1.conf ...... server1 conf file
+- │  │  ├─ server2.conf ...... server2 conf file
+- │  │  └─ server3.conf ...... server3 conf file
+- ├─ publisher ......... publisher and subscriber
+- │   ├─ p.py ..... publisher script
+- │   └─ s.conf ......sublisher script
+- ├─ test . package-lock.json
+- │   ├─ values.env................. env file
+- │   ├─ test_cluster.py................. test script
+- │   └─ requirements.env................. packages to install
+- ├─ main.tf ...... terraform file
+- └─ readme.md ..... readme.md
 
